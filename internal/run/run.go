@@ -402,13 +402,12 @@ func applyAccepts(findings []model.Finding, accepts []policy.Acceptance, now tim
 	}
 }
 
-// acceptLive treats the expiry date as the last day the acceptance holds.
+// acceptLive treats the expiry date as the last day the acceptance holds. An
+// entry with no expiry holds until it is withdrawn; the date itself decides the
+// rest, including what an unreadable value means.
 func acceptLive(accept policy.Acceptance, now time.Time) bool {
 	if accept.Expires == nil {
 		return true
 	}
-	if _, err := time.Parse("2006-01-02", *accept.Expires); err != nil {
-		return false
-	}
-	return now.UTC().Format("2006-01-02") <= *accept.Expires
+	return !accept.Expires.Expired(now)
 }

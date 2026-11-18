@@ -1,6 +1,6 @@
 # ROADMAP: Gauge
 
-Last updated: 2026-11-09T14:40Z (update Drips Wave 11 submission packet and sibling comparison)
+Last updated: 2026-11-18T16:00Z (test role severity catalog, acceptance expiry date type, immutable role floors)
 Roadmap version: 3
 
 This file is the single source of truth for remaining work. It is read before every task and updated after every change.
@@ -40,7 +40,7 @@ The repository is 100% ready when every task in Phases 0 to 6 is done and every 
 | 4 | Dogfood and release v0.1.0 | 2 | 9 | 22% |
 | 5 | v0.2 features | 3 | 11 | 27% |
 | 6 | Release v0.2.0 and community | 0 | 5 | 0% |
-| 7 (backlog) | Backlog | 0 | 4 | 0% |
+| 7 (backlog) | Backlog | 3 | 7 | 42% |
 | **Phases 0 to 6** | **Readiness total** | **56** | **79** | **70%** |
 | Gates | G1 to G10 | 3 | 10 | 30% |
 <!-- PROGRESS:END -->
@@ -226,6 +226,9 @@ Constraint on the two remaining experimental tasks: Gauge never builds or submit
 - [ ] **7.2** Claimable balances, liquidity pool shares and sponsorship analysis.
 - [ ] **7.3** Alert integrations (probably never; JSON and CI cover it).
 - [ ] **7.4** Cross-check issued assets against `stellar.toml` currencies.
+- [x] **7.5** Test every role severity key: all sixteen `PRD.md` 6.1 rules against all five roles, with the raised counts pinned. S. Done when: `internal/policy/roles_keys_test.go` fails on a misspelled severity key and the counts read 4, 5, 4, 4, 0. (done 2026-11-18: the catalog is hardcoded rather than read back from `roleFloors`, so a typo in `roles.go` defines no row of its own. The matrix asks `SeverityFor(role, rule, model.SevInfo)` for all eighty combinations and `TestRoleRaisedCounts` pins 4, 5, 4, 4, 0, while `TestRoleFloorsNameOnlyCatalogRules` fails a key that names no catalog rule. The scratch run that proves the failure mode is recorded in the changelog: `flag-drift` misspelled as `flag-dirft` fails the issuer cell, names the unknown key and drops the issuer count to 3, and reverting it passes.)
+- [x] **7.6** Give an acceptance expiry a type: `policy.Date` with `Valid` and `Expired`, keeping the `YYYY-MM-DD` form and the inclusive last day in UTC. S. Done when: `Acceptance.Expires` is a `*Date`, validation and `acceptLive` ask the type rather than parsing, and a malformed value still returns `ErrAccept`. (done 2026-11-18: the layout lives once in `internal/policy/accept.go`. `Expired` compares UTC calendar days, so a clock ahead of or behind UTC can neither widen nor narrow the window, and a value that is not a date reads as expired because `Load` would have refused it. `internal/run` lost its own parse, `validate.go` lost the `time` import it only used for this, and the existing UTC and inclusive-day assertions in `run_test.go` moved to `policy.Date` unchanged in substance.)
+- [x] **7.7** Remove the mutable role severity map: `roleFloors(role)` builds a fresh map per call, and an unknown role gets an empty one. S. Done when: no package-level severity map remains, `SeverityFor` is its only reader, and a test proves a caller cannot mutate the catalog. (done 2026-11-18: the switch keeps every row and every comment from the map it replaces, and the severities are unchanged. `internal/policy/roles_mutation_test.go` mutates a returned map, adds a forged key and checks the next call, and a repeat-pass test reads the same severities after a mutation so a report cannot depend on how many findings were judged before it. `TestSeverityForNeverLowers` now walks `roleFloors` rather than the deleted variable; no assertion was relaxed.)
 
 ## 6. Dependency map (critical path)
 
@@ -276,6 +279,7 @@ Newest first. One row per merged change.
 
 | Date (UTC) | Change | Tasks |
 |---|---|---|
+| 2026-11-18 | Tasks 7.5, 7.6 and 7.7 together, because all three are the same catalog read three ways. 7.5 adds `internal/policy/roles_keys_test.go`: PRD.md 6.1's sixteen rule IDs are hardcoded beside Appendix A's five roles, the matrix asks `SeverityFor(role, rule, model.SevInfo)` for all eighty combinations, and the raised counts are pinned at 4, 5, 4, 4, 0. The base is INFO on purpose, so the matrix tests the severity keys rather than the catalog's default severities, and the never-lowers property stays with `TestSeverityForNeverLowers`. A misspelled key fails three ways rather than one: the cell it should raise comes back INFO, the role's raised count drops, and `TestRoleFloorsNameOnlyCatalogRules` reports the key that names no rule. That failure mode was run rather than assumed: `flag-drift` spelled `flag-dirft` under the issuer row failed the issuer cell, named the key that is in no catalog, and dropped the issuer count from 4 to 3, and reverting the scratch edit returned the package to green. 7.6 puts the acceptance expiry behind `policy.Date`, with `Valid` and `Expired` in `internal/policy/accept.go`, so the layout `2006-01-02`, the inclusive last day and the UTC calendar comparison exist in one place instead of in `validate.go` and `run.acceptLive` separately. A malformed value still returns `ErrAccept` at load and still reads as expired when a hand-built entry reaches the orchestrator, which the existing `run_test.go` case for `the 4th of November` now asks through the type. 7.7 replaces the package-level `roleSeverities` map with `roleFloors(role)`, a switch that returns a fresh map per call and an empty map for an unknown role. The rows, their cells and their comments are unchanged; `SeverityFor` remains the only reader, and `roles_mutation_test.go` mutates a returned map and adds a forged key to prove the next call is unaffected, with a repeat-pass test behind it. No rule, severity, message, fingerprint or exit code changed. Checks on this branch: `gofmt -l .` printed nothing, and `go vet ./...`, `staticcheck ./...`, `go test ./... -race -count=1`, `govulncheck ./...`, `python3 scripts/sync_readme.py --check`, `scripts/generate_issues.sh --check`, `scripts/roadmap_progress.sh --check ROADMAP.md`, `scripts/test_roadmap_gate.sh` and `scripts/check_roadmap_touched.sh origin/main` all exited 0. | 7.5, 7.6, 7.7 |
 | 2026-11-09 | Updated Drips Wave submission packet (docs/WAVE_SUBMISSION.md) for Wave 11: confirmed 200 unit tests passing, all 16 rules registered, OpenSSF Scorecard at 6.8 with live badge, live documentation site at https://posture-sec.github.io/guage/, dynamic README metric sync, and updated sibling comparison data across org repositories. | none ticked |
 | 2026-11-09 | Finalized project naming by removing all occurrences of "working name" across repository documentation, PRD, architecture, and roadmap files. Implemented dynamic README metrics synchronization (`scripts/sync_readme.py`) generating live Shields.io endpoint JSON files under `site/data/` for 200 tests and 16 rules, and enforced with `--check` in the `roadmap-check` workflow. | none ticked |
 | 2026-11-09 | Add Docs Live badge to README and prominent navigation links to the 7-page live documentation site. | none ticked |
