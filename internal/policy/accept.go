@@ -6,11 +6,11 @@ import "time"
 const dateLayout = "2006-01-02"
 
 type Acceptance struct {
-	Rule    string  `toml:"rule"`
-	Account string  `toml:"account"`
-	Network string  `toml:"network"`
-	Reason  string  `toml:"reason"`
-	Expires *Date   `toml:"expires"`
+	Rule    string `toml:"rule"`
+	Account string `toml:"account"`
+	Network string `toml:"network"`
+	Reason  string `toml:"reason"`
+	Expires *Date  `toml:"expires"`
 }
 
 // Date is a calendar day written as YYYY-MM-DD, the form an acceptance expiry
