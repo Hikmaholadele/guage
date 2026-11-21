@@ -6,10 +6,11 @@ import "time"
 const dateLayout = "2006-01-02"
 
 type Acceptance struct {
-	Rule    string `toml:"rule"`
-	Account string `toml:"account"`
-	Reason  string `toml:"reason"`
-	Expires *Date  `toml:"expires"`
+	Rule    string  `toml:"rule"`
+	Account string  `toml:"account"`
+	Network string  `toml:"network"`
+	Reason  string  `toml:"reason"`
+	Expires *Date   `toml:"expires"`
 }
 
 // Date is a calendar day written as YYYY-MM-DD, the form an acceptance expiry
@@ -34,4 +35,18 @@ func (d Date) Expired(now time.Time) bool {
 		return true
 	}
 	return now.UTC().Format(dateLayout) > string(d)
+}
+
+// ExpectedPassphrase returns the passphrase a network value stands for. The two
+// named networks map to their published passphrases and any other value is the
+// passphrase itself, which is the same mapping a policy's top-level network gets.
+func ExpectedPassphrase(network string) string {
+	switch network {
+	case "mainnet":
+		return "Public Global Stellar Network ; September 2015"
+	case "testnet":
+		return "Test SDF Network ; September 2015"
+	default:
+		return network
+	}
 }
